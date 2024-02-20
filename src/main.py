@@ -1,11 +1,17 @@
 from dotenv import load_dotenv
 import os
+from api.openai_api import OpenAI_OrganizationAPI
 
 # Load environment variables
 load_dotenv()
-API_KEY = os.getenv("API_KEY")
-ORGANIZATION_ID = os.getenv("ORGANIZATION_ID")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+OPENAI_ORGANIZATION_ID = os.getenv("OPENAI_ORGANIZATION_ID")
 
+openai_api = OpenAI_OrganizationAPI(
+    OPENAI_API_KEY,
+    OPENAI_ORGANIZATION_ID
+)
+openai_api.test_call()
 
 '''
 
