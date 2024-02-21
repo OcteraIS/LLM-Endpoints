@@ -4,5 +4,6 @@
 ```
 source llm-api-venv/bin/activate
 python setup.py install
+python main.py
 ```
 
