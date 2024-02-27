@@ -10,9 +10,10 @@ OPENAI_ORGANIZATION_ID = os.getenv("OPENAI_ORGANIZATION_ID")
 openai_api = OpenAI_OrganizationAPI(
     OPENAI_API_KEY,
     OPENAI_ORGANIZATION_ID,
-    debug_print=False
+    debug_print=True
 )
 
-openai_api.single_prompt_usage_example()
+openai_api.run_verification()
+
 # openai_api.complex_prompt_usage_example()
 

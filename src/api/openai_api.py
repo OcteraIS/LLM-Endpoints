@@ -82,7 +82,7 @@ class OpenAI_OrganizationAPI:
     return server_response
 
   # Call this function to test Keys and IDs
-  def legacy_test_call(self) -> bool:
+  def __legacy_test_call(self) -> bool:
 
     # Make sure the program wont halt by a 
     #   bad api call or unexpected unwrap
@@ -99,19 +99,17 @@ class OpenAI_OrganizationAPI:
       status = '✅' if response == 'This is a test!' else '⛔'
 
       # If everything is ok, print and return
-      if self.debug_print:
-        print(f'{status} Server response is \'{response}\'')
+      if self.DEBUG_PRINT:
+        print(f'{status} Legacy Server response is \'{response}\'')
       return True
     
     except Exception as e:
-      
       # If something's wrong, print and return
-      if print_result:
-        print(e)
+      print(e)
       return False
   
   # Call this function to test Keys and IDs, and if paid models are available
-  def test_call(self) -> bool:
+  def __test_call(self) -> bool:
 
     # Make sure the program won't halt by a 
     #   bad api call or unexpected unwrap
@@ -129,16 +127,31 @@ class OpenAI_OrganizationAPI:
       status = '✅' if response == 'This is a test!' else '⛔'
 
       # If everything is ok, print and return
-      if self.debug_print:
-        print(f'{status} Server response is \'{response}\'')
+      if self.DEBUG_PRINT:
+        print(f'{status} Newer Models Server response is \'{response}\'')
       return True
     
     except Exception as e:
       
       # If something's wrong, print and return
-      if print_result:
+      if self.print_result:
         print(e)
       return False
+    
+  def run_verification(self):
+
+    # Test legacy models API route
+    print("Testing legacy route...")
+    legacy_route_result = self.__legacy_test_call()
+
+    # Test newer models API route
+    print("Testing newer models route...")
+    main_route_result = self.__test_call()
+
+    # Show result
+    api_results_ok = legacy_route_result and main_route_result
+    print('✅ Everything\'s running!' if api_results_ok else '⛔ Problem detected!')
+    
 
   # Verifies if model selected is new or old, and call functions accordingly
   def single_prompt(self, model: str, prompt: str):
@@ -238,17 +251,6 @@ class OpenAI_OrganizationAPI:
     # return response
     
     pass
-
-
-
-
-
-
-
-
-
-
-
 
 
 
