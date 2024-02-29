@@ -5,6 +5,10 @@ from typing import List, Iterable, Union
 from openai import OpenAI, ChatCompletion, Stream
 from openai.types.chat import ChatCompletionMessageParam
 
+import csv
+import os
+from pathlib import Path
+
 """
 ===============================
 Newer models JSON reply format:
@@ -70,6 +74,12 @@ class OpenAI_OrganizationAPI:
   # Used to coerce the model to perform specific tasks
   __default_system_prompt = 'You are a helpful assistant.'
 
+  # Model parameters
+  __stream = False # A boolean indicating whether to stream responses or not (default is False).
+  __max_tokens = 256 # An integer representing the maximum number of tokens to generate (default is 256).
+  __temperature = 0.7 # A float representing the sampling temperature for generating responses (default is 0.7).
+  __top_p = 1 # A float representing the nucleus sampling parameter (default is 1).
+
   def __init__(self, API_KEY: str, ORGANIZATION_ID: str, debug_print: bool = True) -> None:
     """
       Initializes OpenAI_OrganizationAPI with the provided API_KEY, ORGANIZATION_ID, and debug_print settings.
@@ -91,6 +101,10 @@ class OpenAI_OrganizationAPI:
 
     self.DEBUG_PRINT = debug_print
   
+  # MARK: Private functions
+
+  # Helper functions
+    
   def __remove_quotes(self, text) -> str:
     """
     Removes leading and trailing single or double quotes from a string.
@@ -194,7 +208,74 @@ class OpenAI_OrganizationAPI:
     # If the input is a list of strings
     return [ [system_prompt_format, {"role": "user", "content": text} ] for text in text_input]
 
-  def __api(self, model: str, messages: List[dict[str, str]], stream: bool = False, max_tokens: int = 128, temperature: float = 0.7, top_p: float = 1) -> ChatCompletion:
+  def __validate_csv_extension(self, file_path: str) -> str:
+    """
+    Validates the extension of a file path. If the file does not have a .csv extension, it is added. If the file has a different extension, it is swapped to .csv.
+
+    Parameters:
+    - file_path: A string representing the file path.
+
+    Returns:
+    - str: The validated file path with the .csv extension.
+    """
+    # Get the file extension
+    _, file_extension = os.path.splitext(file_path)
+
+    # If the file has .csv extension, return the path as it is
+    if file_extension.lower() == '.csv':
+        return file_path
+    # If the file has another extension, print a warning and swap it to .csv
+    elif file_extension:
+        print("WARNING: Bad file extension passed. Changed to .csv.")
+        return os.path.splitext(file_path)[0] + '.csv'
+    # If the file has no extension, add .csv
+    else:
+        return file_path + '.csv'
+
+  def __save_as_csv(self, data: list[tuple[str,str]], filename: str, download_path: str = None) -> None:
+    """
+    Save a list of tuples as a CSV file.
+
+    Parameters:
+    - data: A list of tuples to be saved as a CSV file.
+    - filename: A string representing the filename for the CSV file.
+    - custom_path: A string representing the custom path for saving the CSV file (default is Downloads folder).
+
+    Returns:
+    - None
+    """
+
+    # Create the full path to the CSV file
+    if download_path:
+
+      if os.path.exists(download_path):
+        file_path = os.path.join(download_path, filename)
+      else:
+        print('WARNING: Invalid path given. Saving to downloads folder istead.')
+        file_path = str(Path.home() / "Downloads")
+
+    else:
+      # If no custom path is given, save to the downloads folder
+      file_path = os.path.join(
+        (str(Path.home() / "Downloads")),
+        filename
+      )
+
+    # Format the file path to csv
+    file_path = self.__validate_csv_extension(file_path)
+
+    # Transpose the data (list of tuples)
+    transposed_data = list(zip(*data))
+
+    # Write the transposed data to the CSV file
+    with open(file_path, 'w', newline='') as csvfile:
+      csv_writer = csv.writer(csvfile)
+      csv_writer.writerows(transposed_data)
+
+
+  # Open AI API functions
+
+  def __api(self, model: str, messages: List[dict[str, str]]) -> ChatCompletion:
     """
     Calls the API for chat completion using the provided parameters.
 
@@ -209,10 +290,6 @@ class OpenAI_OrganizationAPI:
     Returns:
     - ChatCompletion: An object containing the response stream from the API.
     """
-
-    # Verifies temperature or top_p are being updated, if both warn it, else, keep going
-    if temperature != 0.7 and top_p != 1:
-      print("Warning: Please only change either temperature or top_p, not both.")
     
     # If the model passed is an unexpected one, print error and end
     if model not in self.__new_models:
@@ -224,15 +301,15 @@ class OpenAI_OrganizationAPI:
     server_response = self.client.chat.completions.create(
       model=model,
       messages=messages,
-      stream=stream,
-      max_tokens=max_tokens, 
-      temperature=temperature, 
-      top_p=top_p
+      stream=self.__stream,
+      max_tokens=self.__max_tokens, 
+      temperature=self.__temperature, 
+      top_p=self.__top_p
     )
 
     return server_response
 
-  def __legacy_api(self, model: str, prompt: List[dict[str, str]], stream: bool = False) -> Union[ChatCompletion, dict]:
+  def __legacy_api(self, model: str, prompt: List[dict[str, str]]) -> Union[ChatCompletion, dict]:
     """
       Calls the OpenAI API for the legacy models and returns the LLM answer.
 
@@ -257,7 +334,7 @@ class OpenAI_OrganizationAPI:
     server_response = self.client.completions.create(
       model=model,
       prompt=prompt,
-      stream=stream
+      stream=self.__stream
     )
     return server_response
 
@@ -328,6 +405,31 @@ class OpenAI_OrganizationAPI:
       print(e)
       return False
 
+  # MARK: Public functions
+    
+  def set_model_parameters(self, stream: bool = False, max_tokens: int = 128, temperature: float = 0.7, top_p: float = 1) -> None:
+    """
+    Sets the parameters for the model.
+
+    Parameters:
+    - stream: A boolean indicating whether to stream responses or not (default is False).
+    - max_tokens: An integer representing the maximum number of tokens to generate (default is 128).
+    - temperature: A float representing the sampling temperature for generating responses (default is 0.7).
+    - top_p: A float representing the nucleus sampling parameter (default is 1).
+
+    Returns:
+      - None
+    """
+
+    # Verifies if temperature or top_p are being updated, if both: warn it, else, keep going
+    if temperature != 0.7 and top_p != 1:
+      print("Warning: Please only change either temperature or top_p, not both.")
+
+    self.__stream = stream
+    self.__max_tokens = max_tokens
+    self.__temperature = temperature
+    self.__top_p = top_p
+
   def run_verification(self):
     """
     Runs verification tests for both legacy and newer models API routes and displays the results.
@@ -371,14 +473,17 @@ class OpenAI_OrganizationAPI:
     print(f'Unespected OpenAI model name: {model}')
     print(f'Available models: {self.__new_models + self.__legacy_models}')    
 
-  def single_thread_queries(self, prompts: list[str], system_prompt: Union[str, None] = None, model: str = 'gpt-3.5-turbo') -> zip:
+  def single_thread_queries(self, prompts: list[str], system_prompt: Union[str, None] = None, model: str = 'gpt-3.5-turbo', query_output_path: str = None, query_output_filename: str = 'result') -> zip:
     """
     Processes a list of prompts with the specified model and returns a zip of prompts and replies.
+    Saves output to file.
 
     Parameters:
     - prompts: A list of strings representing the prompts to be processed.
     - system_prompt (Union[None, str]): The system prompt to use. If None, defaults to "You are a helpful assistant."
     - model: A string representing the model to be used for processing the prompts (default is 'gpt-3.5-turbo').
+    - query_output_path: A string representing the filename for the CSV file.
+    - query_output_filename: A string representing the custom path for saving the CSV file (default is Downloads folder).
 
     Returns:
     - zip: A zip object containing pairs of prompts and their corresponding replies.
@@ -394,16 +499,21 @@ class OpenAI_OrganizationAPI:
         print(f'Completed query: {_count} out of {_total}.')
         _count += 1
 
-    return zip(prompts, replies)
+    result =  zip(prompts, replies)
+    self.__save_as_csv(result, query_output_filename, query_output_path)
+    return result
   
-  def multi_thread_queries(self, prompts: list[str], system_prompt: Union[str, None] = None, model: str = 'gpt-3.5-turbo') -> list[str, str]:
+  def multi_thread_queries(self, prompts: list[str], system_prompt: Union[str, None] = None, model: str = 'gpt-3.5-turbo', query_output_path: str = None, query_output_filename: str = 'result') -> list[str, str]:
     """
     Executes multiple queries concurrently using threads.
+    Saves output to file.
 
     Parameters:
     - prompts (list[str]): A list of text prompts for which queries need to be made.
     - system_prompt (Union[None, str]): The system prompt to use. If None, defaults to "You are a helpful assistant."
     - model (str): The model used for querying.
+    - query_output_path: A string representing the filename for the CSV file.
+    - query_output_filename: A string representing the custom path for saving the CSV file (default is Downloads folder).
 
     Returns:
     - list[str, str]: A list containing pairs of prompts and their corresponding replies.
@@ -427,11 +537,13 @@ class OpenAI_OrganizationAPI:
                 print(f'Query for "{text}" generated an exception: {exc}')
     
     # Once all threads ended, return results
+    self.__save_as_csv(replies, query_output_filename, query_output_path)
     return replies
 
   def multi_turn_query(self, messages: list[tuple[str, str]], system_prompt: Union[None, str] = None, model: str = 'gpt-3.5-turbo') -> Union[None, str]:
     """
     Performs a multi-turn query using a conversational model.
+    Does not save output to file.
 
     Parameters:
     - messages (List[Tuple[str, str]]): A list of tuples representing conversational turns.

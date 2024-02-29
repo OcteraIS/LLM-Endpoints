@@ -59,7 +59,7 @@ If you receive something else, either the packages in the repository are outdate
 
 ### Making requests
 
-There are 4 main methods implemented. The answer comes in one chunk, but if you want to have it streamed (just like how it works on the website), you can. However, this feature is not fully tested and can lead to interesting results.
+There are 4 main methods implemented and all calls default to ```gpt-3.5-turbo```. The answer comes in one chunk, but if you want to have it streamed (just like how it works on the website), you can. However, this feature is not fully tested and can lead to interesting results.
 
 #### No-memory requests
 
@@ -68,7 +68,8 @@ To run prompts without long-term memory of any conversation. It comes in two fla
 
 ##### One request
 
-Sends a single request given a prompt to the model. Defaults to gpt-3.5-turbo.
+Sends a single request given a prompt to the model. 
+
 
 ```python
 query(self, prompt: str, model: str = 'gpt-3.5-turbo') -> list[str]:
@@ -82,10 +83,10 @@ Comes in two flavors (single or multi-threaded), and returns a string tuple arra
 
 ```python
 # Runs all prompts sequentially
-single_thread_queries(model: str, prompts: [str], output_path: str) -> [(str, str)]
+single_thread_queries(self, prompts: list[str], system_prompt: Union[str, None] = None, model: str = 'gpt-3.5-turbo', query_output_path: str = None, query_output_filename: str = 'result') -> zip
 
 # Runs all prompts concurrently
-multi_thread_queries(model: str, prompts: [str], output_path: str) -> [(str, str)]
+multi_thread_queries(self, prompts: list[str], system_prompt: Union[str, None] = None, model: str = 'gpt-3.5-turbo', query_output_path: str = None, query_output_filename: str = 'result') -> list[str, str]
 ```
 
 #### Memory requests
@@ -97,12 +98,27 @@ This section is still being explored
 #### long_term_memory(model, prompt)
 #### peek(model, prompt) -->
 
+
+### Changing models parameters
+
+There are multiple parameters a LLM can use. The ones currently supported are:
+
+- ```stream```: A boolean indicating whether to stream responses or not (default is False).
+- ```max_tokens```: An integer representing the maximum number of tokens to generate (default is 128).
+- ```temperature```: A float representing the sampling temperature for generating responses (default is 0.7).
+- ```top_p```: A float representing the nucleus sampling parameter (default is 1).
+
+```python
+set_model_parameters(self, stream: bool = False, max_tokens: int = 128, temperature: float = 0.7, top_p: float = 1) -> None
+```
+
+
 ### Todo:
 - [X] Properly comment on the code
 - [X] Allow to change the (main) system prompt
 - [X] No-memory multiple requests
 - [X] Conversation with memory, pre-set conversation
-- [ ] Allow settings (e.g. temperature) in high-level functions
+- [X] Allow settings (e.g. temperature) in high-level functions
 - [ ] Save big queries locally in files
 - [ ] Conversation with memory, one request at a time
 - [ ] Conversation with memory, multiple requests at a time
