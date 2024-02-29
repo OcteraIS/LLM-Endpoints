@@ -119,7 +119,7 @@ set_model_parameters(self, stream: bool = False, max_tokens: int = 128, temperat
 - [X] No-memory multiple requests
 - [X] Conversation with memory, pre-set conversation
 - [X] Allow settings (e.g. temperature) in high-level functions
-- [ ] Save big queries locally in files
+- [X] Save big queries locally in files
 - [ ] Conversation with memory, one request at a time
 - [ ] Conversation with memory, multiple requests at a time
 - [ ] [Test and fix the stream feature](https://cookbook.openai.com/examples/how_to_stream_completions)
