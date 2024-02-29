@@ -14,8 +14,7 @@ openai_api = OpenAI_OrganizationAPI(
 )
 
 # This line verifies if everything is ok. You can delete it after testing it
-# openai_api.run_verification()
-
+openai_api.run_verification()
 
 # ========================================================================
 #                       MARK: Write your code here
@@ -24,12 +23,3 @@ openai_api = OpenAI_OrganizationAPI(
         # (it follows project documentation patterns)
 # ========================================================================
 
-results = openai_api.multi_thread_queries(
-    [
-        'Who won the 1998 Fifa World Cup?',
-        'How do I make pre-grounded coffee',
-        'What do you know about ice wine tea?'
-    ]
-)
-
-[ print(x) for x in results]
