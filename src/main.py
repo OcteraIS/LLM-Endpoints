@@ -13,7 +13,15 @@ openai_api = OpenAI_OrganizationAPI(
     debug_print=True
 )
 
+# This line verifies if everything is ok. You can delete it after testing it
 openai_api.run_verification()
 
-# openai_api.complex_prompt_usage_example()
+
+# ========================================================================
+#                       MARK: Write your code here
+    # To know which functions to use, look at documentation (../README.md)
+    # Or alternatively, you can read the code in ./api/openai_api.py 
+        # (it follows project documentation patterns)
+# ========================================================================
+
 

@@ -1,7 +1,7 @@
 
 # LLM Endpoints
 
-This is a small project to help using different LLMs without having to understand their API.
+This is a small project to help use different LLMs without having to understand their API.
 Currently, only OpenAI models are working.
 
 ## OpenAI
@@ -12,21 +12,21 @@ There are 3 main steps needed to run the project.
 
 After downloading the repository, create a ```.env``` file inside the project folder (```./LLLM-Endpoints/.env```).
 
-After trat, go to [OpenAI playground](https://platform.openai.com/playground), login, create and save in the ```.env``` file your API Key AND the Octera Organization Identifier.
+After that, go to [OpenAI playground](https://platform.openai.com/playground), login, create and save in the ```.env``` file your API Key AND the Octera Organization Identifier.
 
 ```
 OPENAI_API_KEY=<your-key-here>
 OPENAI_ORGANIZATION_ID=<your-new-organization-key-here>
 ```
 
-Once that is done, you are ready to do requests to OpenAI API.
+Once that is done, you are ready to make requests to OpenAI API.
 
 
 ### Running the program
 
 First, run the virtual environment (venv) and download the necessary packages:
 
-(warning: there are some packages that will freeze the terminal for a few seconds – as long as it doesn't takes more than 1 minute, everything is ok and there's no need to exit and restart)
+(warning: some packages will freeze the terminal for a few seconds – as long as it doesn't take more than 1 minute, everything is ok and there's no need to exit and restart)
 
 ```
 source llm-api-venv/bin/activate
@@ -55,39 +55,42 @@ Testing newer models route...
 ✅ Everything's running!
 ```
 
-If you receive something else, either the packages in the repository are outdated and it requires maintenance or some step of the set up was skipped.
+If you receive something else, either the packages in the repository are outdated and require maintenance or some step of the setup was skipped.
 
 ### Making requests
 
-There are 4 main methods implemented. The answer comes in one chunk, but if you want to have it streamed (just like how it works in the website), you can. However, this feature is not fully tested and can lead to interesting results.
+There are 4 main methods implemented. The answer comes in one chunk, but if you want to have it streamed (just like how it works on the website), you can. However, this feature is not fully tested and can lead to interesting results.
 
 #### No-memory requests
 
-To run prompts without long-term memory of any conversation. It comes in two flavours:
+To run prompts without long-term memory of any conversation. It comes in two flavors:
 
 
 ##### One request
 
-Sends a single request given a prompt to the model:
+Sends a single request given a prompt to the model. Defaults to gpt-3.5-turbo.
 
 ```python
-single_prompt(model: str, prompt: str) -> str
+query(self, prompt: str, model: str = 'gpt-3.5-turbo') -> list[str]:
 ```
 
 ##### Multiple requests
 
 For each prompt passed, the function will call the API to get the reply and save the answer into a ```.csv``` file, with the first row being the prompts, and the second row being the reply.
 
-It also returns an string tuple array, containing a list formated as ```(prompt, reply)```
+Comes in two flavors (single or multi-threaded), and returns a string tuple array, containing pairs of prompts and their corresponding replies formatted as ```(prompt, reply)```
 
 ```python
-# TO BE IMPLEMENTED
-single_prompt(model: str, prompts: [str], output_path: str) -> [(str, str)]
+# Runs all prompts sequentially
+single_thread_queries(model: str, prompts: [str], output_path: str) -> [(str, str)]
+
+# Runs all prompts concurrently
+multi_thread_queries(model: str, prompts: [str], output_path: str) -> [(str, str)]
 ```
 
 #### Memory requests
 
-This section is still beeing explored
+This section is still being explored
 
 <!-- complex_prompt(model, prompt)
 #### new_long_term_memory(model, prompt)
@@ -95,9 +98,13 @@ This section is still beeing explored
 #### peek(model, prompt) -->
 
 ### Todo:
-- [ ] Properly comment the code
-- [ ] Allow to change the (main) system prompt
-- [ ] No-memory multiple requests
+- [X] Properly comment on the code
+- [X] Allow to change the (main) system prompt
+- [X] No-memory multiple requests
+- [X] Conversation with memory, pre-set conversation
+- [ ] Allow settings (e.g. temperature) in high-level functions
+- [ ] Save big queries locally in files
 - [ ] Conversation with memory, one request at a time
 - [ ] Conversation with memory, multiple requests at a time
+- [ ] [Test and fix the stream feature](https://cookbook.openai.com/examples/how_to_stream_completions)
 - [ ] Consider if conversations should be saved using an encryption key
