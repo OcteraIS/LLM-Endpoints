@@ -10,9 +10,16 @@ OPENAI_ORGANIZATION_ID = os.getenv("OPENAI_ORGANIZATION_ID")
 openai_api = OpenAI_OrganizationAPI(
     OPENAI_API_KEY,
     OPENAI_ORGANIZATION_ID,
-    debug_print=False
+    debug_print=True
 )
 
-openai_api.single_prompt_usage_example()
-# openai_api.complex_prompt_usage_example()
+# This line verifies if everything is ok. You can delete it after testing it
+openai_api.run_verification()
+
+# ========================================================================
+#                       MARK: Write your code here
+    # To know which functions to use, look at documentation (../README.md)
+    # Or alternatively, you can read the code in ./api/openai_api.py 
+        # (it follows project documentation patterns)
+# ========================================================================
 
