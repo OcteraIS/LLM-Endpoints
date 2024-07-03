@@ -29,7 +29,10 @@ class OpenAI_OrganizationAPI:
   __max_tokens = 256 # An integer representing the maximum number of tokens to generate (default is 256).
   __temperature = 0.7 # A float representing the sampling temperature for generating responses (default is 0.7).
   __top_p = 1 # A float representing the nucleus sampling parameter (default is 1).
+  
+  # Save output data in file parameters
   __transpose_data = False # A boolean indicating whether to transpose the CSV outputs (default is False).
+  __file_extension = '.csv' # The default file extension for saving CSV files. It currently only accepts csv.
 
   def __init__(self, API_KEY: str, ORGANIZATION_ID: str, debug_print: bool = True) -> None:
     """
@@ -211,9 +214,19 @@ class OpenAI_OrganizationAPI:
         (str(Path.home() / "Downloads")),
         filename
       )
+    
+    # If there is already a path with this name, don't replace it, but add a number to the end
+    aux = 1
+    while os.path.exists(os.path.join(file_path + self.__file_extension)):
+      file_path = f'{file_path} ({aux})'
+      aux += 1
 
-    # Format the file path to csv
-    file_path = self.__validate_csv_extension(file_path)
+    # Format the file path to the configured extension
+    if self.__file_extension == '.csv':
+      file_path = self.__validate_csv_extension(file_path)
+    elif self.__file_extension == '.json':
+      pass # TODO: implement json saving
+    # file_path = self.__validate_extension(file_path) # it should auto detect the extension and fix it if needed
 
     # Transpose the data (list of tuples)
     transposed_data = list(zip(*data)) if self.__transpose_data else data
@@ -439,6 +452,7 @@ class OpenAI_OrganizationAPI:
     _total = len(prompts)
     _count = 1
 
+    # Gets the replies for each prompt
     replies = []
     for text in prompts:
       replies.append(self.query(text, system_prompt, model))
@@ -447,6 +461,7 @@ class OpenAI_OrganizationAPI:
         print(f'Completed query: {_count} out of {_total}.')
         _count += 1
 
+    # Zips the prompts, save the result as a csv file, and return it
     result =  zip(prompts, replies)
     self.__save_as_csv(result, query_output_filename, query_output_path)
     return result
@@ -460,8 +475,8 @@ class OpenAI_OrganizationAPI:
     - prompts (list[str]): A list of text prompts for which queries need to be made.
     - system_prompt (Union[None, str]): The system prompt to use. If None, defaults to "You are a helpful assistant."
     - model (str): The model used for querying.
-    - query_output_path: A string representing the filename for the CSV file.
-    - query_output_filename: A string representing the custom path for saving the CSV file (default is Downloads folder).
+    - query_output_path: A string representing the custom path for saving the CSV file (default is Downloads folder).
+    - query_output_filename: A string representing the filename for the CSV file.
 
     Returns:
     - list[str, str]: A list containing pairs of prompts and their corresponding replies.
@@ -636,5 +651,4 @@ Legacy models JSON reply format:
   #   for chunk in stream:
   #     if chunk.choices[0].delta.content is not None:
   #         print(chunk.choices[0].delta.content, end="")
-
 
