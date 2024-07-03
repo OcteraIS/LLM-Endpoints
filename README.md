@@ -114,13 +114,15 @@ set_model_parameters(self, stream: bool = False, max_tokens: int = 128, temperat
 
 
 ### Todo:
+- [ ] Conversation with memory, one request at a time
+- [ ] Conversation with memory, multiple requests at a time
+- [ ] [Test and fix the stream feature](https://cookbook.openai.com/examples/how_to_stream_completions)
+- [ ] Consider if conversations should be saved using an encryption key
+
+#### Done
 - [X] Properly comment on the code
 - [X] Allow to change the (main) system prompt
 - [X] No-memory multiple requests
 - [X] Conversation with memory, pre-set conversation
 - [X] Allow settings (e.g. temperature) in high-level functions
 - [X] Save big queries locally in files
-- [ ] Conversation with memory, one request at a time
-- [ ] Conversation with memory, multiple requests at a time
-- [ ] [Test and fix the stream feature](https://cookbook.openai.com/examples/how_to_stream_completions)
-- [ ] Consider if conversations should be saved using an encryption key

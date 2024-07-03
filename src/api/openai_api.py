@@ -9,62 +9,12 @@ import csv
 import os
 from pathlib import Path
 
-"""
-===============================
-Newer models JSON reply format:
-===============================
-{
-  "id": "chatcmpl-123",
-  "object": "chat.completion",
-  "created": 1677652288,
-  "model": "gpt-3.5-turbo-0125",
-  "system_fingerprint": "fp_44709d6fcb",
-  "choices": [{
-    "index": 0,
-    "message": {
-      "role": "assistant",
-      "content": "\n\nHello there, how may I assist you today?",
-    },
-    "logprobs": null,
-    "finish_reason": "stop"
-  }],
-  "usage": {
-    "prompt_tokens": 9,
-    "completion_tokens": 12,
-    "total_tokens": 21
-  }
-}
-
-=========================
-Legacy models JSON reply format:
-=========================
-{
-  "choices": [
-    {
-      "finish_reason": "length",
-      "index": 0,
-      "logprobs": null,
-      "text": "\n\n\"Let Your Sweet Tooth Run Wild at Our Creamy Ice Cream Shack"
-    }
-  ],
-  "created": 1683130927,
-  "id": "cmpl-7C9Wxi9Du4j1lQjdjhxBlO22M61LD",
-  "model": "gpt-3.5-turbo-instruct",
-  "object": "text_completion",
-  "usage": {
-    "completion_tokens": 16,
-    "prompt_tokens": 10,
-    "total_tokens": 26
-  }
-}
-
-"""
 
 class OpenAI_OrganizationAPI:
 
   # Newest model identifiers
-  # Endpoint: endpoint: https://api.openai.com/v1/completions
-  __new_models = [ "gpt-4-0125-preview", "gpt-4-turbo-preview", "gpt-4-1106-preview", "gpt-4-vision-preview", "gpt-4", "gpt-4-0314", "gpt-4-0613", "gpt-4-32k", "gpt-4-32k-0314", "gpt-4-32k-0613", "gpt-3.5-turbo", "gpt-3.5-turbo-16k", "gpt-3.5-turbo-0301", "gpt-3.5-turbo-0613", "gpt-3.5-turbo-1106", "gpt-3.5-turbo-0125", "gpt-3.5-turbo-16k-0613"]
+  # endpoint: https://api.openai.com/v1/completions
+  # Check available models at https://platform.openai.com/docs/models
   
   # Legacy model identifiers
   # endpoint: https://api.openai.com/v1/chat/completions
@@ -291,12 +241,6 @@ class OpenAI_OrganizationAPI:
     - ChatCompletion: An object containing the response stream from the API.
     """
     
-    # If the model passed is an unexpected one, print error and end
-    if model not in self.__new_models:
-      print(f'Unexpected newer OpenAI model name: {model}')
-      print(f'Available models: {self.__new_models}')
-      return
-    
     # If everything's ok, call the API
     server_response = self.client.chat.completions.create(
       model=model,
@@ -461,17 +405,15 @@ class OpenAI_OrganizationAPI:
     - list[str]: The result of processing the prompt. It is a list because it may return more than one reply.
     """
 
-    # If the model passed is a newer or older model, call API
-    if model in self.__new_models:
-      response = self.__api(model=model, messages=self.__map_text_to_openai_message(prompt, system_prompt=system_prompt))
-      return [ choice.message.content for choice in response.choices]
-    elif model in self.__legacy_models:
+    # If the model passed is an older model, call API
+    if model in self.__legacy_models:
       response = self.__legacy_api(model=model, prompt=prompt)
-      return [choice.text for choice in response.choices]
+      return [choice.text for choice in response.choices] 
     
-    # If unexpected model, print error
-    print(f'Unespected OpenAI model name: {model}')
-    print(f'Available models: {self.__new_models + self.__legacy_models}')    
+    # If model passed is a new one, call new models API endpoint
+    # Check available models at https://platform.openai.com/docs/models
+    response = self.__api(model=model, messages=self.__map_text_to_openai_message(prompt, system_prompt=system_prompt))
+    return [ choice.message.content for choice in response.choices]
 
   def single_thread_queries(self, prompts: list[str], system_prompt: Union[str, None] = None, model: str = 'gpt-3.5-turbo', query_output_path: str = None, query_output_filename: str = 'result') -> zip:
     """
@@ -575,20 +517,69 @@ class OpenAI_OrganizationAPI:
     json_body = self.__map_formatted_texts_to_openai_message(messages, system_prompt)
 
     # If the model passed is a newer or older model, call API
-    if model in self.__new_models:
-      response = self.__api(model=model, messages=json_body)
-      texts = [ choice.message.content for choice in response.choices]
-      texts = texts if len(texts) > 1 else texts[0]
-      return json_body + [{"role":"user", "content":texts}]
     
     # FIXME: Legacy route not working here
-    elif model in self.__legacy_models:
+    if model in self.__legacy_models:
       response = self.__legacy_api(model=model, messages=json_body)
       return json_body + [choice.text for choice in response.choices]
     
-    # If unexpected model, print error
-    print(f'Unespected OpenAI model name: {model}')
-    print(f'Available models: {self.__new_models + self.__legacy_models}')
+    # Check available models at https://platform.openai.com/docs/models
+    response = self.__api(model=model, messages=json_body)
+    texts = [ choice.message.content for choice in response.choices]
+    texts = texts if len(texts) > 1 else texts[0]
+    return json_body + [{"role":"user", "content":texts}]
+
+
+"""
+===============================
+Newer models JSON reply format:
+===============================
+{
+  "id": "chatcmpl-123",
+  "object": "chat.completion",
+  "created": 1677652288,
+  "model": "gpt-3.5-turbo-0125",
+  "system_fingerprint": "fp_44709d6fcb",
+  "choices": [{
+    "index": 0,
+    "message": {
+      "role": "assistant",
+      "content": "\n\nHello there, how may I assist you today?",
+    },
+    "logprobs": null,
+    "finish_reason": "stop"
+  }],
+  "usage": {
+    "prompt_tokens": 9,
+    "completion_tokens": 12,
+    "total_tokens": 21
+  }
+}
+
+=========================
+Legacy models JSON reply format:
+=========================
+{
+  "choices": [
+    {
+      "finish_reason": "length",
+      "index": 0,
+      "logprobs": null,
+      "text": "\n\n\"Let Your Sweet Tooth Run Wild at Our Creamy Ice Cream Shack"
+    }
+  ],
+  "created": 1683130927,
+  "id": "cmpl-7C9Wxi9Du4j1lQjdjhxBlO22M61LD",
+  "model": "gpt-3.5-turbo-instruct",
+  "object": "text_completion",
+  "usage": {
+    "completion_tokens": 16,
+    "prompt_tokens": 10,
+    "total_tokens": 26
+  }
+}
+
+"""
 
 
   # TODO: following sections are parts that are still being explored
