@@ -29,6 +29,7 @@ class OpenAI_OrganizationAPI:
   __max_tokens = 256 # An integer representing the maximum number of tokens to generate (default is 256).
   __temperature = 0.7 # A float representing the sampling temperature for generating responses (default is 0.7).
   __top_p = 1 # A float representing the nucleus sampling parameter (default is 1).
+  __transpose_data = False # A boolean indicating whether to transpose the CSV outputs (default is False).
 
   def __init__(self, API_KEY: str, ORGANIZATION_ID: str, debug_print: bool = True) -> None:
     """
@@ -215,7 +216,7 @@ class OpenAI_OrganizationAPI:
     file_path = self.__validate_csv_extension(file_path)
 
     # Transpose the data (list of tuples)
-    transposed_data = list(zip(*data))
+    transposed_data = list(zip(*data)) if self.__transpose_data else data
 
     # Write the transposed data to the CSV file
     with open(file_path, 'w', newline='') as csvfile:
@@ -351,7 +352,11 @@ class OpenAI_OrganizationAPI:
 
   # MARK: Public functions
     
-  def set_model_parameters(self, stream: bool = False, max_tokens: int = 128, temperature: float = 0.7, top_p: float = 1) -> None:
+  def configure(self, stream: bool = False, max_tokens: int = 128, temperature: float = 0.7, top_p: float = 1, transpose_csv_outputs: str = False)-> None:
+    # Redundant function for easier use
+    self.set_model_parameters(stream, max_tokens, temperature, top_p, transpose_csv_outputs)
+
+  def set_model_parameters(self, stream: bool = False, max_tokens: int = 128, temperature: float = 0.7, top_p: float = 1, transpose_csv_outputs: str = False) -> None:
     """
     Sets the parameters for the model.
 
@@ -360,6 +365,7 @@ class OpenAI_OrganizationAPI:
     - max_tokens: An integer representing the maximum number of tokens to generate (default is 128).
     - temperature: A float representing the sampling temperature for generating responses (default is 0.7).
     - top_p: A float representing the nucleus sampling parameter (default is 1).
+    - transpose_csv_outputs: A boolean indicating whether to transpose the CSV outputs (default is False). If True, each line in the csv will be a prompt and its corresponding reply, otherwise, one column will be prompts and the other will be replies.
 
     Returns:
       - None
@@ -424,8 +430,8 @@ class OpenAI_OrganizationAPI:
     - prompts: A list of strings representing the prompts to be processed.
     - system_prompt (Union[None, str]): The system prompt to use. If None, defaults to "You are a helpful assistant."
     - model: A string representing the model to be used for processing the prompts (default is 'gpt-3.5-turbo').
-    - query_output_path: A string representing the filename for the CSV file.
-    - query_output_filename: A string representing the custom path for saving the CSV file (default is Downloads folder).
+    - query_output_path: A string representing the custom path for saving the CSV file (default is Downloads folder).
+    - query_output_filename: A string representing the filename for the CSV file.
 
     Returns:
     - zip: A zip object containing pairs of prompts and their corresponding replies.
@@ -626,9 +632,9 @@ Legacy models JSON reply format:
     
   #   pass
 
-  def print_from_stream(stream: Stream):
-    for chunk in stream:
-      if chunk.choices[0].delta.content is not None:
-          print(chunk.choices[0].delta.content, end="")
+  # def print_from_stream(stream: Stream):
+  #   for chunk in stream:
+  #     if chunk.choices[0].delta.content is not None:
+  #         print(chunk.choices[0].delta.content, end="")
 
 
