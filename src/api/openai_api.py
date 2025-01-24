@@ -216,11 +216,13 @@ class OpenAI_OrganizationAPI:
       )
     
     # If there is already a path with this name, don't replace it, but add a number to the end
-    aux = 1
-    while os.path.exists(os.path.join(file_path + self.__file_extension)):
-      file_path = f'{file_path} ({aux})'
+    aux = 0
+    temp_path = file_path + self.__file_extension
+    while os.path.exists(temp_path):
       aux += 1
-
+      temp_path = f'{file_path} ({aux}){self.__file_extension}'
+    file_path = temp_path
+    
     # Format the file path to the configured extension
     if self.__file_extension == '.csv':
       file_path = self.__validate_csv_extension(file_path)
@@ -434,7 +436,7 @@ class OpenAI_OrganizationAPI:
     response = self.__api(model=model, messages=self.__map_text_to_openai_message(prompt, system_prompt=system_prompt))
     return [ choice.message.content for choice in response.choices]
 
-  def single_thread_queries(self, prompts: list[str], system_prompt: Union[str, None] = None, model: str = 'gpt-3.5-turbo', query_output_path: str = None, query_output_filename: str = 'result') -> zip:
+  def single_thread_queries(self, prompts: list[str], system_prompt: Union[str, None] = None, model: str = 'gpt-3.5-turbo', query_output_path: str = None, query_output_filename: str = 'result', query_simple_questions: Union[list[str], None] = None) -> zip:
     """
     Processes a list of prompts with the specified model and returns a zip of prompts and replies.
     Saves output to file.
@@ -445,6 +447,7 @@ class OpenAI_OrganizationAPI:
     - model: A string representing the model to be used for processing the prompts (default is 'gpt-3.5-turbo').
     - query_output_path: A string representing the custom path for saving the CSV file (default is Downloads folder).
     - query_output_filename: A string representing the filename for the CSV file.
+    - query_simple_questions: A string array with the questions to be saved in the CSV file, instead of the raw prompt. If None, the raw prompts will be saved. Good for when the prompts are too similar and long, as you can save only the differences.
 
     Returns:
     - zip: A zip object containing pairs of prompts and their corresponding replies.
@@ -455,14 +458,15 @@ class OpenAI_OrganizationAPI:
     # Gets the replies for each prompt
     replies = []
     for text in prompts:
-      replies.append(self.query(text, system_prompt, model))
+      replies.append(self.query(text, system_prompt, model)[0].strip())
 
       if self.DEBUG_PRINT:
         print(f'Completed query: {_count} out of {_total}.')
         _count += 1
 
     # Zips the prompts, save the result as a csv file, and return it
-    result =  zip(prompts, replies)
+    questions = query_simple_questions if query_simple_questions else prompts
+    result =  zip(questions, replies)
     self.__save_as_csv(result, query_output_filename, query_output_path)
     return result
   
