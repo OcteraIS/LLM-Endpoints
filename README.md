@@ -2,9 +2,9 @@
 # LLM Endpoints
 
 This is a small project to help use different LLMs without having to understand their API.
-Currently, only OpenAI models are working.
+Currently, OpenAI and Google models can be used thorugh this repository.
 
-## OpenAI
+## How to run
 
 There are 3 main steps needed to run the project.
 
@@ -12,33 +12,48 @@ There are 3 main steps needed to run the project.
 
 After downloading the repository, create a ```.env``` file inside the project folder (```./LLLM-Endpoints/.env```).
 
-After that, go to [OpenAI playground](https://platform.openai.com/playground), login, create and save in the ```.env``` file your API Key AND the Octera Organization Identifier.
+For ChatGPT, go to [OpenAI playground](https://platform.openai.com/playground), login, create and save in the ```.env``` file your API Key AND the Octera Organization Identifier.
 
 ```
 OPENAI_API_KEY=<your-key-here>
 OPENAI_ORGANIZATION_ID=<your-new-organization-key-here>
 ```
 
-Once that is done, you are ready to make requests to OpenAI API.
+For Gemini, go to [Google's AIStudio](https://aistudio.google.com/apikey), login, create and save in the `.env` file your API key.
+```
+GEMINI_API_KEY=<your-key-here>
+```
+
+Once that is done, you are ready to make requests to the selected models.
 
 
-### Running the program
+### Venv Set Up
 
 First, run the virtual environment (venv) and download the necessary packages:
 
 (warning: some packages will freeze the terminal for a few seconds – as long as it doesn't take more than 1 minute, everything is ok and there's no need to exit and restart)
 
+<!-- ✅ New Set up -->
+```
+source llm-api-venv/bin/activate
+pip install -e .
+```
+If a problem occurs, odds are is that you need to run and `pip install --upgrade pip setuptools wheel`. If this doesn't work, open a new issue, or contact one of the developers.
+
+<!-- ⚠️ Deprecated set-up. Will be deleted on a new version.
 ```
 source llm-api-venv/bin/activate
 python setup.py install
-```
+``` -->
 
 You can deactivate a virtual environment by typing deactivate in your shell
 ```
 deactivate
 ```
 
-The software is pre-loaded with a test to verify if everything is running accordingly.
+### Running Inside Venv
+
+The software is pre-loaded with a test using ChatGPT to verify if everything is running accordingly.
 After running the main file:
 
 ```
@@ -55,74 +70,55 @@ Testing newer models route...
 ✅ Everything's running!
 ```
 
-If you receive something else, either the packages in the repository are outdated and require maintenance or some step of the setup was skipped.
+If you receive something else, make sure your account API key was added to the `.env` file, and that you have permission from OpenAI to use their API. If both are ok, either the packages in the repository are outdated and require maintenance, or some step of the setup was skipped.
 
-### Making requests
+### Documentation For Different Models
 
-There are 4 main methods implemented and all calls default to ```gpt-3.5-turbo```. The answer comes in one chunk, but if you want to have it streamed (just like how it works on the website), you can. However, this feature is not fully tested and can lead to interesting results.
-
-#### No-memory requests
-
-To run prompts without long-term memory of any conversation. It comes in two flavors:
-
-
-##### One request
-
-Sends a single request given a prompt to the model. 
+| Company | Model | Repository Documentation | Official Documentation | Status |
+|----------|----------|----------|----------|----------|
+| OpenAI | ChatGPT | [open-ai.md](./model-documentation/open-ai.md) | [OpenAI API Reference](https://platform.openai.com/docs/api-reference/introduction) | ✅ |
+| Google | Gemini | [gemini.md](./model-documentation//google-gemini.md) | [Gemini API Docs](https://ai.google.dev/gemini-api/docs) | WIP |
+| DeepSeek AI | DeepSeek | [deepseek.md](./model-documentation/deep-seek.md) | [DeepSeek API Docs](https://api-docs.deepseek.com/) | To be done |
 
 
-```python
-query(self, prompt: str, model: str = 'gpt-3.5-turbo') -> list[str]:
+### Troubleshooting
+If for some reason the setup is not downloading the necessary files and you're getting errors like ``, you can try the following:
+
+1. Uninstall and Reinstall problematic packages
+
+If you're, for example, getting a `ModuleNotFoundError: No module named 'google.ai'`, try running the following:
+
+```
+pip uninstall google-generativeai -y && pip install google-generativeai==0.8.4
 ```
 
-##### Multiple requests
-
-For each prompt passed, the function will call the API to get the reply and save the answer into a ```.csv``` file, with the first row being the prompts, and the second row being the reply.
-
-Comes in two flavors (single or multi-threaded), and returns a string tuple array, containing pairs of prompts and their corresponding replies formatted as ```(prompt, reply)```
-
-```python
-# Runs all prompts sequentially
-single_thread_queries(self, prompts: list[str], system_prompt: Union[str, None] = None, model: str = 'gpt-3.5-turbo', query_output_path: str = None, query_output_filename: str = 'result') -> zip
-
-# Runs all prompts concurrently
-multi_thread_queries(self, prompts: list[str], system_prompt: Union[str, None] = None, model: str = 'gpt-3.5-turbo', query_output_path: str = None, query_output_filename: str = 'result') -> list[str, str]
+If the problem is with the openai package:
+```
+pip uninstall openai -y && pip install openai==1.60.1
 ```
 
-#### Memory requests
+You can find the package name and versions in the `pyproject.toml` file.
 
-This section is still being explored
+⚠️ This solution was necessary from `setup.py` not being the best scenario anymore, because ["all direct invocations of setup.py are effectively deprecated"](https://blog.ganssle.io/articles/2021/10/setup-py-deprecated.html). This error should not occur anymore with the current implementation.
 
-<!-- complex_prompt(model, prompt)
-#### new_long_term_memory(model, prompt)
-#### long_term_memory(model, prompt)
-#### peek(model, prompt) -->
+2. Reset venv packages:
 
+Here, the problem lies in the venv getting confused with existing packages in the environment, therefore we will clean it and then do a fresh install. The steps are:
 
-### Changing models parameters
-
-There are multiple parameters a LLM can use. The ones currently supported are:
-
-- ```stream```: A boolean indicating whether to stream responses or not (default is False).
-- ```max_tokens```: An integer representing the maximum number of tokens to generate (default is 128).
-- ```temperature```: A float representing the sampling temperature for generating responses (default is 0.7).
-- ```top_p```: A float representing the nucleus sampling parameter (default is 1).
-
-```python
-set_model_parameters(self, stream: bool = False, max_tokens: int = 128, temperature: float = 0.7, top_p: float = 1) -> None
-```
+* Make sure you are running the venv. If unsure, run: `source llm-api-venv/bin/activate`
+* Uninstall packages: `pip freeze | xargs pip uninstall -y`
+* If you want to confirm if it uninstalled it all, you can check running `pip list` and see the outputed list
+* Run the set up again with `pip install -e .` (include the dot). It will take a couple minutes to fresh install everything.
+* If you want, you can run `pip list` to check all installed packages.
 
 
 ### Todo:
+- [ ] DeepSeek access
 - [ ] Conversation with memory, one request at a time
 - [ ] Conversation with memory, multiple requests at a time
 - [ ] [Test and fix the stream feature](https://cookbook.openai.com/examples/how_to_stream_completions)
 - [ ] Consider if conversations should be saved using an encryption key
+<!-- - [ ] Separate file storage to it's own class -->
 
-#### Done
-- [X] Properly comment on the code
-- [X] Allow to change the (main) system prompt
-- [X] No-memory multiple requests
-- [X] Conversation with memory, pre-set conversation
-- [X] Allow settings (e.g. temperature) in high-level functions
-- [X] Save big queries locally in files
+#### Ongoing
+- [X] Gemini access
