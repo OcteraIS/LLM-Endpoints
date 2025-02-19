@@ -9,62 +9,12 @@ import csv
 import os
 from pathlib import Path
 
-"""
-===============================
-Newer models JSON reply format:
-===============================
-{
-  "id": "chatcmpl-123",
-  "object": "chat.completion",
-  "created": 1677652288,
-  "model": "gpt-3.5-turbo-0125",
-  "system_fingerprint": "fp_44709d6fcb",
-  "choices": [{
-    "index": 0,
-    "message": {
-      "role": "assistant",
-      "content": "\n\nHello there, how may I assist you today?",
-    },
-    "logprobs": null,
-    "finish_reason": "stop"
-  }],
-  "usage": {
-    "prompt_tokens": 9,
-    "completion_tokens": 12,
-    "total_tokens": 21
-  }
-}
-
-=========================
-Legacy models JSON reply format:
-=========================
-{
-  "choices": [
-    {
-      "finish_reason": "length",
-      "index": 0,
-      "logprobs": null,
-      "text": "\n\n\"Let Your Sweet Tooth Run Wild at Our Creamy Ice Cream Shack"
-    }
-  ],
-  "created": 1683130927,
-  "id": "cmpl-7C9Wxi9Du4j1lQjdjhxBlO22M61LD",
-  "model": "gpt-3.5-turbo-instruct",
-  "object": "text_completion",
-  "usage": {
-    "completion_tokens": 16,
-    "prompt_tokens": 10,
-    "total_tokens": 26
-  }
-}
-
-"""
 
 class OpenAI_OrganizationAPI:
 
   # Newest model identifiers
-  # Endpoint: endpoint: https://api.openai.com/v1/completions
-  __new_models = [ "gpt-4-0125-preview", "gpt-4-turbo-preview", "gpt-4-1106-preview", "gpt-4-vision-preview", "gpt-4", "gpt-4-0314", "gpt-4-0613", "gpt-4-32k", "gpt-4-32k-0314", "gpt-4-32k-0613", "gpt-3.5-turbo", "gpt-3.5-turbo-16k", "gpt-3.5-turbo-0301", "gpt-3.5-turbo-0613", "gpt-3.5-turbo-1106", "gpt-3.5-turbo-0125", "gpt-3.5-turbo-16k-0613"]
+  # endpoint: https://api.openai.com/v1/completions
+  # Check available models at https://platform.openai.com/docs/models
   
   # Legacy model identifiers
   # endpoint: https://api.openai.com/v1/chat/completions
@@ -79,6 +29,10 @@ class OpenAI_OrganizationAPI:
   __max_tokens = 256 # An integer representing the maximum number of tokens to generate (default is 256).
   __temperature = 0.7 # A float representing the sampling temperature for generating responses (default is 0.7).
   __top_p = 1 # A float representing the nucleus sampling parameter (default is 1).
+  
+  # Save output data in file parameters
+  __transpose_data = False # A boolean indicating whether to transpose the CSV outputs (default is False).
+  __file_extension = '.csv' # The default file extension for saving CSV files. It currently only accepts csv.
 
   def __init__(self, API_KEY: str, ORGANIZATION_ID: str, debug_print: bool = True) -> None:
     """
@@ -260,12 +214,24 @@ class OpenAI_OrganizationAPI:
         (str(Path.home() / "Downloads")),
         filename
       )
-
-    # Format the file path to csv
-    file_path = self.__validate_csv_extension(file_path)
+    
+    # If there is already a path with this name, don't replace it, but add a number to the end
+    aux = 0
+    temp_path = file_path + self.__file_extension
+    while os.path.exists(temp_path):
+      aux += 1
+      temp_path = f'{file_path} ({aux}){self.__file_extension}'
+    file_path = temp_path
+    
+    # Format the file path to the configured extension
+    if self.__file_extension == '.csv':
+      file_path = self.__validate_csv_extension(file_path)
+    elif self.__file_extension == '.json':
+      pass # TODO: implement json saving
+    # file_path = self.__validate_extension(file_path) # it should auto detect the extension and fix it if needed
 
     # Transpose the data (list of tuples)
-    transposed_data = list(zip(*data))
+    transposed_data = list(zip(*data)) if self.__transpose_data else data
 
     # Write the transposed data to the CSV file
     with open(file_path, 'w', newline='') as csvfile:
@@ -290,12 +256,6 @@ class OpenAI_OrganizationAPI:
     Returns:
     - ChatCompletion: An object containing the response stream from the API.
     """
-    
-    # If the model passed is an unexpected one, print error and end
-    if model not in self.__new_models:
-      print(f'Unexpected newer OpenAI model name: {model}')
-      print(f'Available models: {self.__new_models}')
-      return
     
     # If everything's ok, call the API
     server_response = self.client.chat.completions.create(
@@ -407,7 +367,11 @@ class OpenAI_OrganizationAPI:
 
   # MARK: Public functions
     
-  def set_model_parameters(self, stream: bool = False, max_tokens: int = 128, temperature: float = 0.7, top_p: float = 1) -> None:
+  def configure(self, stream: bool = False, max_tokens: int = 128, temperature: float = 0.7, top_p: float = 1, transpose_csv_outputs: str = False)-> None:
+    # Redundant function for easier use
+    self.set_model_parameters(stream, max_tokens, temperature, top_p, transpose_csv_outputs)
+
+  def set_model_parameters(self, stream: bool = False, max_tokens: int = 128, temperature: float = 0.7, top_p: float = 1, transpose_csv_outputs: str = False) -> None:
     """
     Sets the parameters for the model.
 
@@ -416,6 +380,7 @@ class OpenAI_OrganizationAPI:
     - max_tokens: An integer representing the maximum number of tokens to generate (default is 128).
     - temperature: A float representing the sampling temperature for generating responses (default is 0.7).
     - top_p: A float representing the nucleus sampling parameter (default is 1).
+    - transpose_csv_outputs: A boolean indicating whether to transpose the CSV outputs (default is False). If True, each line in the csv will be a prompt and its corresponding reply, otherwise, one column will be prompts and the other will be replies.
 
     Returns:
       - None
@@ -461,19 +426,17 @@ class OpenAI_OrganizationAPI:
     - list[str]: The result of processing the prompt. It is a list because it may return more than one reply.
     """
 
-    # If the model passed is a newer or older model, call API
-    if model in self.__new_models:
-      response = self.__api(model=model, messages=self.__map_text_to_openai_message(prompt, system_prompt=system_prompt))
-      return [ choice.message.content for choice in response.choices]
-    elif model in self.__legacy_models:
+    # If the model passed is an older model, call API
+    if model in self.__legacy_models:
       response = self.__legacy_api(model=model, prompt=prompt)
-      return [choice.text for choice in response.choices]
+      return [choice.text for choice in response.choices] 
     
-    # If unexpected model, print error
-    print(f'Unespected OpenAI model name: {model}')
-    print(f'Available models: {self.__new_models + self.__legacy_models}')    
+    # If model passed is a new one, call new models API endpoint
+    # Check available models at https://platform.openai.com/docs/models
+    response = self.__api(model=model, messages=self.__map_text_to_openai_message(prompt, system_prompt=system_prompt))
+    return [ choice.message.content for choice in response.choices]
 
-  def single_thread_queries(self, prompts: list[str], system_prompt: Union[str, None] = None, model: str = 'gpt-3.5-turbo', query_output_path: str = None, query_output_filename: str = 'result') -> zip:
+  def single_thread_queries(self, prompts: list[str], system_prompt: Union[str, None] = None, model: str = 'gpt-3.5-turbo', query_output_path: str = None, query_output_filename: str = 'result', query_simple_questions: Union[list[str], None] = None) -> zip:
     """
     Processes a list of prompts with the specified model and returns a zip of prompts and replies.
     Saves output to file.
@@ -482,8 +445,9 @@ class OpenAI_OrganizationAPI:
     - prompts: A list of strings representing the prompts to be processed.
     - system_prompt (Union[None, str]): The system prompt to use. If None, defaults to "You are a helpful assistant."
     - model: A string representing the model to be used for processing the prompts (default is 'gpt-3.5-turbo').
-    - query_output_path: A string representing the filename for the CSV file.
-    - query_output_filename: A string representing the custom path for saving the CSV file (default is Downloads folder).
+    - query_output_path: A string representing the custom path for saving the CSV file (default is Downloads folder).
+    - query_output_filename: A string representing the filename for the CSV file.
+    - query_simple_questions: A string array with the questions to be saved in the CSV file, instead of the raw prompt. If None, the raw prompts will be saved. Good for when the prompts are too similar and long, as you can save only the differences.
 
     Returns:
     - zip: A zip object containing pairs of prompts and their corresponding replies.
@@ -491,15 +455,18 @@ class OpenAI_OrganizationAPI:
     _total = len(prompts)
     _count = 1
 
+    # Gets the replies for each prompt
     replies = []
     for text in prompts:
-      replies.append(self.query(text, system_prompt, model))
+      replies.append(self.query(text, system_prompt, model)[0].strip())
 
       if self.DEBUG_PRINT:
         print(f'Completed query: {_count} out of {_total}.')
         _count += 1
 
-    result =  zip(prompts, replies)
+    # Zips the prompts, save the result as a csv file, and return it
+    questions = query_simple_questions if query_simple_questions else prompts
+    result =  zip(questions, replies)
     self.__save_as_csv(result, query_output_filename, query_output_path)
     return result
   
@@ -512,8 +479,8 @@ class OpenAI_OrganizationAPI:
     - prompts (list[str]): A list of text prompts for which queries need to be made.
     - system_prompt (Union[None, str]): The system prompt to use. If None, defaults to "You are a helpful assistant."
     - model (str): The model used for querying.
-    - query_output_path: A string representing the filename for the CSV file.
-    - query_output_filename: A string representing the custom path for saving the CSV file (default is Downloads folder).
+    - query_output_path: A string representing the custom path for saving the CSV file (default is Downloads folder).
+    - query_output_filename: A string representing the filename for the CSV file.
 
     Returns:
     - list[str, str]: A list containing pairs of prompts and their corresponding replies.
@@ -575,20 +542,69 @@ class OpenAI_OrganizationAPI:
     json_body = self.__map_formatted_texts_to_openai_message(messages, system_prompt)
 
     # If the model passed is a newer or older model, call API
-    if model in self.__new_models:
-      response = self.__api(model=model, messages=json_body)
-      texts = [ choice.message.content for choice in response.choices]
-      texts = texts if len(texts) > 1 else texts[0]
-      return json_body + [{"role":"user", "content":texts}]
     
     # FIXME: Legacy route not working here
-    elif model in self.__legacy_models:
+    if model in self.__legacy_models:
       response = self.__legacy_api(model=model, messages=json_body)
       return json_body + [choice.text for choice in response.choices]
     
-    # If unexpected model, print error
-    print(f'Unespected OpenAI model name: {model}')
-    print(f'Available models: {self.__new_models + self.__legacy_models}')
+    # Check available models at https://platform.openai.com/docs/models
+    response = self.__api(model=model, messages=json_body)
+    texts = [ choice.message.content for choice in response.choices]
+    texts = texts if len(texts) > 1 else texts[0]
+    return json_body + [{"role":"user", "content":texts}]
+
+
+"""
+===============================
+Newer models JSON reply format:
+===============================
+{
+  "id": "chatcmpl-123",
+  "object": "chat.completion",
+  "created": 1677652288,
+  "model": "gpt-3.5-turbo-0125",
+  "system_fingerprint": "fp_44709d6fcb",
+  "choices": [{
+    "index": 0,
+    "message": {
+      "role": "assistant",
+      "content": "\n\nHello there, how may I assist you today?",
+    },
+    "logprobs": null,
+    "finish_reason": "stop"
+  }],
+  "usage": {
+    "prompt_tokens": 9,
+    "completion_tokens": 12,
+    "total_tokens": 21
+  }
+}
+
+=========================
+Legacy models JSON reply format:
+=========================
+{
+  "choices": [
+    {
+      "finish_reason": "length",
+      "index": 0,
+      "logprobs": null,
+      "text": "\n\n\"Let Your Sweet Tooth Run Wild at Our Creamy Ice Cream Shack"
+    }
+  ],
+  "created": 1683130927,
+  "id": "cmpl-7C9Wxi9Du4j1lQjdjhxBlO22M61LD",
+  "model": "gpt-3.5-turbo-instruct",
+  "object": "text_completion",
+  "usage": {
+    "completion_tokens": 16,
+    "prompt_tokens": 10,
+    "total_tokens": 26
+  }
+}
+
+"""
 
 
   # TODO: following sections are parts that are still being explored
@@ -635,9 +651,8 @@ class OpenAI_OrganizationAPI:
     
   #   pass
 
-  def print_from_stream(stream: Stream):
-    for chunk in stream:
-      if chunk.choices[0].delta.content is not None:
-          print(chunk.choices[0].delta.content, end="")
-
+  # def print_from_stream(stream: Stream):
+  #   for chunk in stream:
+  #     if chunk.choices[0].delta.content is not None:
+  #         print(chunk.choices[0].delta.content, end="")
 
