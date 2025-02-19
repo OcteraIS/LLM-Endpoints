@@ -113,7 +113,6 @@ Here, the problem lies in the venv getting confused with existing packages in th
 
 
 ### Todo:
-- [ ] DeepSeek access
 - [ ] Conversation with memory, one request at a time
 - [ ] Conversation with memory, multiple requests at a time
 - [ ] [Test and fix the stream feature](https://cookbook.openai.com/examples/how_to_stream_completions)
@@ -121,4 +120,4 @@ Here, the problem lies in the venv getting confused with existing packages in th
 <!-- - [ ] Separate file storage to it's own class -->
 
 #### Ongoing
-- [X] Gemini access
+- [ ] DeepSeek access
