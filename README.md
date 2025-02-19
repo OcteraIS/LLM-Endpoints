@@ -77,7 +77,7 @@ If you receive something else, make sure your account API key was added to the `
 | Company | Model | Repository Documentation | Official Documentation | Status |
 |----------|----------|----------|----------|----------|
 | OpenAI | ChatGPT | [open-ai.md](./model-documentation/open-ai.md) | [OpenAI API Reference](https://platform.openai.com/docs/api-reference/introduction) | ✅ |
-| Google | Gemini | [gemini.md](./model-documentation//google-gemini.md) | [Gemini API Docs](https://ai.google.dev/gemini-api/docs) | WIP |
+| Google | Gemini | [gemini.md](./model-documentation//google-gemini.md) | [Gemini API Docs](https://ai.google.dev/gemini-api/docs) | ✅ |
 | DeepSeek AI | DeepSeek | [deepseek.md](./model-documentation/deep-seek.md) | [DeepSeek API Docs](https://api-docs.deepseek.com/) | To be done |
 
 
