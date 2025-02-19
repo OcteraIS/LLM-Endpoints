@@ -1,5 +1,6 @@
 from dotenv import load_dotenv
 import os
+from api.gemini_api import GeminiAPI
 from api.openai_api import OpenAI_OrganizationAPI
 
 # Load environment variables
